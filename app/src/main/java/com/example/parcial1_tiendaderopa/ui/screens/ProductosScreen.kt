@@ -28,6 +28,7 @@ fun ProductosScreen(
 ) {
     var categoriaSeleccionadaId by remember { mutableStateOf(categoriaInicialId) }
     var tipoFiltro by remember { mutableStateOf("TODOS") }
+    var productoSeleccionado by remember { mutableStateOf<Producto?>(null) }
 
     val categorias = repository.obtenerCategorias()
     val productos = repository.obtenerProductos().filter { producto ->
@@ -112,16 +113,35 @@ fun ProductosScreen(
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(productos, key = { it.id }) { producto ->
-                    ProductoItemCard(producto = producto)
+                    ProductoItemCard(
+                        producto = producto,
+                        onClick = { productoSeleccionado = producto }
+                    )
                 }
+            }
+        }
+
+        // Modal de Detalle de Producto
+        productoSeleccionado?.let { producto ->
+            ModalBottomSheet(
+                onDismissRequest = { productoSeleccionado = null }
+            ) {
+                ProductoDetalleSheetContent(
+                    producto = producto,
+                    onCerrar = { productoSeleccionado = null }
+                )
             }
         }
     }
 }
 
 @Composable
-fun ProductoItemCard(producto: Producto) {
+fun ProductoItemCard(
+    producto: Producto,
+    onClick: () -> Unit = {}
+) {
     ElevatedCard(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
         colors = CardDefaults.elevatedCardColors(
@@ -244,6 +264,99 @@ fun ProductoItemCard(producto: Producto) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun ProductoDetalleSheetContent(
+    producto: Producto,
+    onCerrar: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+    ) {
+        Text(
+            text = "Detalle del Producto #${producto.id}",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.secondary
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = producto.nombre,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Ficha de información técnica
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Información General",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Categoría: ${producto.categoria.nombre}", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "Descripción Cat.: ${producto.categoria.descripcion}", style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Precio Base: $$${String.format(Locale.US, "%.2f", producto.precioBase)}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = "Precio Final Calculado: $$${String.format(Locale.US, "%.2f", producto.calcularPrecioFinal())}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(text = "Stock Actual: ${producto.stock} unidades", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Propiedades específicas por Subclase
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Atributos Específicos",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                when (producto) {
+                    is Prenda -> {
+                        Text(text = "• Tipo de Objeto: Prenda de Vestir")
+                        Text(text = "• Talla: ${producto.talla}")
+                        Text(text = "• Color: ${producto.color}")
+                        Text(text = "• Género Target: ${producto.genero}")
+                    }
+                    is Calzado -> {
+                        Text(text = "• Tipo de Objeto: Calzado Deportivo/Urbano")
+                        Text(text = "• Número de Talle: ${producto.numeroTalle}")
+                        Text(text = "• Material / Tipo de Suela: ${producto.tipoSuela}")
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onCerrar,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Entendido / Cerrar")
         }
     }
 }
